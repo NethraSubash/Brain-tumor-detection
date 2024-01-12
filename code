@@ -1,0 +1,149 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
+
+import os
+
+path = os.listdir('/content/drive/MyDrive/brain tumor/Training')
+classes = {'no_tumor':0, 'pituitary_tumor':1}
+
+import cv2
+
+# Initialize empty lists for image data and labels
+X = []
+Y = []
+
+# Define the classes and their corresponding folder names
+classes = {
+    'class1': '1',
+    'class2': '0',
+    # Add more classes if necessary
+}
+
+# Loop through each class
+for class_name, folder_name in classes.items():
+    # Create file path for the class
+    file_path = f'/content/drive/MyDrive/brain tumor/Training/glioma_tumor'
+
+    # Loop through each file in the directory
+    for file_name in os.listdir(file_path):
+        # Construct the full file path
+        full_file_path = os.path.join(file_path, file_name)
+
+        # Read the image in grayscale
+        image = cv2.imread(full_file_path, 0)
+
+        # Resize the image to a fixed size of 200x200 pixels
+        resized_image = cv2.resize(image, (200, 200))
+
+        # Append the resized image to the X list
+        X.append(resized_image)
+
+        # Append the corresponding label to the Y list
+        Y.append(class_name)
+
+# X now contains the image data and Y contains the corresponding labels
+
+X = np.array(X)
+Y = np.array(Y)
+np.unique(Y)
+pd.Series(Y).value_counts()
+
+X.shape
+
+plt.imshow(X[0], cmap='gray')
+
+X_updated = X.reshape(len(X), -1)
+X_updated.shape
+xtrain, xtest, ytrain, ytest = train_test_split(X_updated, Y, random_state=10,
+                                               test_size=.20)
+
+xtrain.shape, xtest.shape
+
+print(xtrain.max(), xtrain.min())
+print(xtest.max(), xtest.min())
+xtrain = xtrain/255
+xtest = xtest/255
+print(xtrain.max(), xtrain.min())
+print(xtest.max(), xtest.min())
+
+from sklearn.decomposition import PCA
+print(xtrain.shape, xtest.shape)
+
+pca = PCA(.98)
+# pca_train = pca.fit_transform(xtrain)
+# pca_test = pca.transform(xtest)
+pca_train = xtrain
+pca_test = xtest
+
+from sklearn.linear_model import LogisticRegression
+from sklearn.svm import SVC
+
+import warnings
+warnings.filterwarnings('ignore')
+
+lg = LogisticRegression(C=0.1)
+lg.fit(pca_train, ytrain)
+
+sv = SVC()
+sv.fit(pca_train, ytrain)
+
+print("Training Score:", lg.score(pca_train, ytrain))
+print("Testing Score:", lg.score(pca_test, ytest))
+
+print("Training Score:", sv.score(pca_train, ytrain))
+print("Testing Score:", sv.score(pca_test, ytest))
+
+pred = sv.predict(pca_test)
+np.where(ytest!=pred)
+
+pred[36]
+ytest[36]
+dec = {0:'No Tumor', 1:'Positive Tumor'}
+
+plt.figure(figsize=(12,8))
+p = os.path.dirname('/content/drive/MyDrive/brain tumor/Testing/')
+c=1
+for i in os.listdir('/content/drive/MyDrive/brain tumor/Testing/glioma_tumor/')[:9]:
+    plt.subplot(3,3,c)
+
+    img = cv2.imread('/content/drive/MyDrive/brain tumor/Testing/glioma_tumor/'+i,0)
+    img1 = cv2.resize(img, (200,200))
+    img1 = img1.reshape(1,-1)/255
+    pred1 = sv.predict(img1)
+    plt.title(dec[pred1[0]])
+    plt.imshow(img, cmap='gray')
+    plt.axis('off')
+    c+=1
+
+print(dec)
+import cv2
+import matplotlib.pyplot as plt
+import os
+
+# Assuming sv is already defined and dec is a dictionary containing class labels
+
+plt.figure(figsize=(12, 8))
+p = os.path.dirname('/content/drive/MyDrive/brain tumor/Testing/')
+c = 1
+
+for i in os.listdir('/content/drive/MyDrive/brain tumor/Testing/pituitary_tumor/')[:16]:
+    plt.subplot(4, 4, c)
+
+    img = cv2.imread('/content/drive/MyDrive/brain tumor/Testing/pituitary_tumor/' + i, 0)
+    img1 = cv2.resize(img, (200, 200))
+    img1 = img1.reshape(1, -1) / 255
+    pred2 = sv.predict(img1)
+
+    class_label = dec.get(pred2[0], 'No Tumor')  # Use get() to avoid KeyError
+    plt.title(class_label)  # Set the title before imshow
+    plt.imshow(img, cmap='gray')
+    plt.axis('off')
+    c += 1
+
+plt.show()
+
+
+
